@@ -1,0 +1,36 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/SectorRegistry.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\n/// @notice Minimal interface for the MaxExtract core contract described in your spec.\ninterface IMaxExtract {\n    function broadcast() external returns (uint256 sectorId);\n    function updateRegistry() external returns (uint256 sectorId);\n\n    function playerToSector(address player) external view returns (uint256 sectorId);\n}\n\ncontract SectorRegistry {\n    // ---- Config ----\n    IMaxExtract public immutable MAX_EXTRACT;\n\n    /// @notice The buy-in EOA that deployed this registry (must match tx.origin in protocol flow)\n    address public immutable owner;\n\n    // ---- State ----\n    uint256 public sectorId; // Store your sector ID\n    mapping(string => address) public modules; // Your module registry\n\n    // ---- Events ----\n    event Broadcast(uint256 indexed sectorId, address indexed owner, address indexed registry);\n    event RegistryUpdated(uint256 indexed sectorId, address indexed owner, address indexed registry);\n    event ModuleSet(string key, address module);\n\n    error NotOwner();\n    error InvalidEOA();\n    error ZeroAddress();\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    constructor(address maxExtract) {\n        if (maxExtract == address(0)) revert ZeroAddress();\n        MAX_EXTRACT = IMaxExtract(maxExtract);\n        owner = msg.sender; // this should be the same EOA that did buy-in\n    }\n\n    /// @notice Chapter 1: calls MaxExtract.broadcast() and stores the returned sectorId.\n    /// Requirements:\n    /// - Must be triggered by the same account that bought into the game.\n    /// - Enforced by requiring tx.origin == owner and msg.sender == owner (direct EOA call).\n    function broadcast() external onlyOwner returns (uint256 id) {\n        // Enforce the exact call path the spec wants: EOA -> Registry -> MaxExtract\n        // That implies:\n        // - msg.sender must be the EOA owner (not another contract)\n        // - tx.origin must be that same EOA\n        if (tx.origin != owner) revert InvalidEOA();\n\n        id = MAX_EXTRACT.broadcast();\n        sectorId = id;\n\n        emit Broadcast(id, owner, address(this));\n    }\n\n    /// @notice If you deploy a NEW registry later, call this from the NEW registry (spec mentions updateRegistry()).\n    /// This wrapper exists so you can update via the registry itself.\n    function updateRegistryOnMaxExtract() external onlyOwner returns (uint256 id) {\n        //if (tx.origin != owner) revert InvalidEOA();\n\n        id = MAX_EXTRACT.updateRegistry();\n        sectorId = id;\n\n        emit RegistryUpdated(id, owner, address(this));\n    }\n\n    /// @notice Add/replace a module contract address (credentials, staking, fuel, etc.)\n    function setModule(string calldata key, address module) external onlyOwner {\n        if (module == address(0)) revert ZeroAddress();\n        modules[key] = module;\n        emit ModuleSet(key, module);\n    }\n\n    /// @notice Convenience: read sector directly from MaxExtract mapping (helps debugging)\n    function sectorIdFromCore() external view returns (uint256) {\n        return MAX_EXTRACT.playerToSector(owner);\n    }\n}\n\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "evmVersion": "paris",
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
