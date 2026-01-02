@@ -25,7 +25,7 @@ const deploySectorRegistry: DeployFunction = async function (hre: HardhatRuntime
   await deploy("SectorRegistry", {
     from: deployer,
     // Contract constructor arguments
-    args: ["0xe166774e1852edf6a7a8ff9b0ac245ad6e8c7753"],
+    args: ["0x2A47A89527e7CB1910405aC848F99d76b2DF250f"],
     log: true,
     // autoMine: can be passed to the deploy function to make the deployment process faster on local networks by
     // automatically mining the contract deployment transaction. There is no effect on live networks.
